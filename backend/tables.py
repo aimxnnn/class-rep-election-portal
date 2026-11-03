@@ -21,13 +21,19 @@ class Candidates(Base):
     status = Column(String, default="nominated")
     nominated_on = Column(DateTime, default=datetime.now)
 
-class votes(Base):
-    __tablename__ = "votes"
+class Votes(Base):
+    __tablename__ = "Votes"
     id = Column(Integer,primary_key=True)
     position = Column(String)
-    candidate_id = Column(Integer, ForeignKey("candidates.id"))
+    candidate_id = Column(Integer, ForeignKey("Candidates.id"))
     voter_roll = Column(String)
     voted_on = Column(DateTime, default=datetime)
 
+class Election(Base):
+    __tablename__ = "Elections"
+    id = Column(Integer, primary_key=True)
+    phase = Column(String, nullable=False, default="nominations")
+    start_time = Column(DateTime, default=datetime.now)
+    end_time = Column(DateTime)
 
 Base.metadata.create_all(engine)
