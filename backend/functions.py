@@ -1,9 +1,8 @@
 #Functions code goes here
-from sqlalchemy import String, Integer, Column, create_engine, DateTime, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import declarative_base, Session
+from sqlalchemy import String, Integer, Column, create_engine, DateTime, ForeignKey
 from datetime import datetime
 
-DB_PATH = "classrep.db"
+DB_PATH = "election.db"
 engine = create_engine(f"sqlite:///{DB_PATH}")
 Base = declarative_base()
 
