@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, Column, create_engine, DateTime
+from sqlalchemy import String, Integer, Column, create_engine, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, Session
 from datetime import datetime
 
@@ -20,6 +20,14 @@ class Candidates(Base):
     manifesto = Column(String(500))
     status = Column(String, default="nominated")
     nominated_on = Column(DateTime, default=datetime.now)
+
+class votes(Base):
+    __tablename__ = "votes"
+    id = Column(Integer,primary_key=True)
+    position = Column(String)
+    candidate_id = Column(Integer, ForeignKey("candidates.id"))
+    voter_roll = Column(String)
+    voted_on = Column(DateTime, default=datetime)
 
 
 Base.metadata.create_all(engine)
