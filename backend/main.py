@@ -22,3 +22,11 @@ def candidates(position = None, approved = True):
 
 #Afifa
 #E2 - get 1 candidate by id
+#E2 - get one candidate by id
+@app.get("/candidates/{candidate_id}")
+def candidate(candidate_id: int):
+    result = function.get_candidate_by_id(candidate_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Candidate not found.")
+    return result
+
