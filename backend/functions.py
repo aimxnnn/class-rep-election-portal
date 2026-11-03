@@ -1,5 +1,6 @@
 #Functions code goes here
 from sqlalchemy import String, Integer, Column, create_engine, DateTime, ForeignKey
+from sqlalchemy.orm import declarative_base, Session
 from datetime import datetime
 
 DB_PATH = "election.db"
