@@ -14,3 +14,6 @@ class votes(Base):
     candidate_id = Column(Integer, ForeignKey("candidates.id"))
     voter_roll = Column(String)
     voted_on = Column(DateTime, default=datetime)
+
+Base.metadata.create_all(engine)
+
