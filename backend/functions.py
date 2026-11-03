@@ -30,8 +30,29 @@ def get_all_candidates(position=None,approved=True):
     session.close()
     return response
 
+#Afifa
+#E2 - get 1 candidate by id.
+def get_candidate_by_id(candidate_id):
+    session = Session(engine)
+    candidate = session.get(Candidates, candidate_id)
+    if candidate is None:
+        session.close()
+        return None
+    response = {
+        "id": candidate.id,
+        "roll_no": candidate.roll_no,
+        "name": candidate.name,
+        "position": candidate.position,
+        "manifesto": candidate.manifesto,
+        "status": candidate.status,
+        "nominated_on": candidate.nominated_on
+    }
+    session.commit()
+    session.close()
+    return response
 
 #Afifa
+#E4 - approve a nomination.
 
 
     
