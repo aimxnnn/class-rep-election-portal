@@ -1,13 +1,29 @@
 from sqlalchemy.orm import Session
 from tables import *
 
+def election_exists():
+    session = Session(engine)
+    count = session.query(Election).count()
+    session.close()
+    return count > 0
+
+def create_election():
+    session = Session(engine)
+    election = Election(phase="nominations")
+    session.add(election)
+    session.commit()
+    session.close()
+    return {"message": "Election created successfully", "phase": "nominations"}
+
 def get_phase():
     session = Session(engine)
     election = session.query(Election).first()
+    if election is None:
+        session.close()
+        return "not created"
     election_phase = election.phase
     session.close()
     return election_phase
-
 
 def find_active_candidate(roll_no):
     session = Session(engine)
@@ -17,7 +33,6 @@ def find_active_candidate(roll_no):
     ).first()
     session.close()
     return existing
-
 
 def nominate_candidate(roll_no, name, position, manifesto):
     session = Session(engine)
@@ -37,7 +52,6 @@ def count_approved(position):
     session.close()
     return count
 
-
 def change_phase(new_phase):
     session = Session(engine)
     election = session.query(Election).first()
@@ -45,7 +59,6 @@ def change_phase(new_phase):
     session.commit()
     session.close()
     return {"message": "Phase changed successfully", "phase": new_phase}
-
 
 def get_voted_positions(voter_roll):
     session = Session(engine)
@@ -55,3 +68,4 @@ def get_voted_positions(voter_roll):
         positions.append(vote.position)
     session.close()
     return positions
+

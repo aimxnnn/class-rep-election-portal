@@ -13,6 +13,13 @@ app.add_middleware(
     allow_headers = ["*"],
 )
 
+#E0: Creates a new election if it doesn't exist (additional)
+@app.post("/election", status_code=201)
+def create_new_election():
+    if election_exists():
+        raise HTTPException(400, "The election already exists.")
+    return create_election()
+
 #E3: Nomiinates candidates: 
 @app.post("/candidates", status_code=201)
 def nominate(roll_no: str, name: str, position: str, manifesto: str):
@@ -22,14 +29,14 @@ def nominate(roll_no: str, name: str, position: str, manifesto: str):
         raise HTTPException(422, "Invalid position.")
     if len(manifesto) < 30:
         raise HTTPException(422, "Manifesto must be at least 30 characters.")
-
+    if get_phase() == "not created":
+      raise HTTPException(400, "The election has not been created yet.")
     if get_phase() != "nominations":
         raise HTTPException(400, "Nominations are closed.")
     if find_active_candidate(roll_no):
         raise HTTPException(400, "This roll number is already a candidate.")
 
     return nominate_candidate(roll_no, name, position, manifesto)
-
 
 #E7: Updates the election phase to the next phase: 
 @app.patch("/election/next-phase")
