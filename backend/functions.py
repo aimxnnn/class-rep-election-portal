@@ -52,20 +52,19 @@ def get_candidate_by_id(candidate_id):
     return response
 
 #Afifa
+#get the current phase (used for the checks in main.py).
+def get_phase():
+    session = Session(engine)
+    election = session.query(Election).first()
+    response = election.phase
+    session.close()
+    return response
+
+#Afifa
 #E4 - approve a nomination.
 def approve_candidate(candidate_id):
     session = Session(engine)
     candidate = session.get(Candidates, candidate_id)
-    election = session.query(Election).first()
-    if candidate is None:
-        session.close()
-        return 404, "Candidate not found."
-    if election.phase != "nominations":
-        session.close()
-        return 400, "Approving is only allowed during nominations."
-    if candidate.status != "nominated":
-        session.close()
-        return 400, "Only a nominated candidate can be approved."
     candidate.status = "approved"
     session.commit()
     response = {
@@ -81,20 +80,10 @@ def approve_candidate(candidate_id):
     return response
 
 #Afifa
-#E5 - withdraw a nomination with the candidate's roll number.
-def withdraw_candidate(candidate_id, roll_no):
+#E5 - withdraw a nomination.
+def withdraw_candidate(candidate_id):
     session = Session(engine)
     candidate = session.get(Candidates, candidate_id)
-    election = session.query(Election).first()
-    if candidate is None:
-        session.close()
-        return 404, "Candidate not found."
-    if election.phase != "nominations":
-        session.close()
-        return 400, "Withdrawing is only allowed during nominations."
-    if candidate.roll_no != roll_no:
-        session.close()
-        return 403, "Roll number does not match this candidate."
     candidate.status = "withdrawn"
     session.commit()
     response = {
@@ -108,8 +97,6 @@ def withdraw_candidate(candidate_id, roll_no):
     }
     session.close()
     return response
-
-    
 
 
 
