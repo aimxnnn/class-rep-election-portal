@@ -4,7 +4,7 @@ from tables import engine, Candidates, Votes, Election, Positions, Next_phase
 
 # Afifa
 # E1 - Get all candidates, optionally filtered by position.
-def get_all_candidates(position=None, approved=True):
+def get_all_candidates(position=None,approved=True):
     session = Session(engine)
 
     if position in Positions:
@@ -16,6 +16,7 @@ def get_all_candidates(position=None, approved=True):
         candidates = session.query(Candidates).all()
 
     response = []
+
 
     for candidate in candidates:
         temp_candidate = {

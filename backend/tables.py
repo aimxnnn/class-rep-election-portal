@@ -37,3 +37,5 @@ class Election(Base):
     end_time = Column(DateTime)
 
 Base.metadata.create_all(engine)
+
+
