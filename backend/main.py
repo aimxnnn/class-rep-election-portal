@@ -12,7 +12,7 @@ app.add_middleware(
     allow_methods = ["*"],
     allow_headers = ["*"],
 )
-
+#Aiman:
 #E0: Creates a new election if it doesn't exist (additional)
 @app.post("/election", status_code=201)
 def create_new_election():

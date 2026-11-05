@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from tables import *
 
+#Aiman 
 def election_exists():
     session = Session(engine)
     count = session.query(Election).count()
