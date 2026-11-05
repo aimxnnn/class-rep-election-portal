@@ -21,7 +21,7 @@ class Candidates(Base):
     status = Column(String, default="nominated")
     nominated_on = Column(DateTime, default=datetime.now)
 
-class Votes(Base):
+class Votes(Base): #Afifa
     __tablename__ = "Votes"
     id = Column(Integer,primary_key=True)
     position = Column(String)

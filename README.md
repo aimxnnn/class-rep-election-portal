@@ -24,8 +24,8 @@ Afifa - Worked on the main.py (E1, E2, E4, E5). -- Complete and tested singularl
 ---
 **DAY 3**
 
-Shafreen - 
+Shafreen - Testing and merging the code to the main branch. Going to figure out frontend.
 
-Afifa -
+Afifa - Testing and merging the code to the main branch. Going to figure out frontend.
 
-Aiman - 
+Aiman - Testing and merging the code to the main branch. Going to figure out frontend.
