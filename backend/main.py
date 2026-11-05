@@ -2,9 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import functions
 
-app = FastAPI(
-    title="Election Portal API"
-)
+app = FastAPI(title="Election Portal API")
 
 app.add_middleware(
     CORSMiddleware,
