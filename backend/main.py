@@ -13,6 +13,40 @@ app.add_middleware(
     allow_methods = ["*"],
     allow_headers = ["*"],
 )
+
+# Shaff
+@app.get("/current_phase")
+def current_phase():
+    phase = get_current_phase()
+    if phase is None:
+        raise HTTPException(status_code = 404, detail = "Election not found.")
+    return {"current_phase": phase}
+
+@app.post("/votes")
+def vote(voter_roll: str, candidate_id: int):
+    notif = cast_vote(voter_roll, candidate_id)
+    if notif == "Voting is not currently open.":
+        raise HTTPException(status_code = 403, detail = notif)
+    if notif == "Candidate not found.":
+        raise HTTPException(status_code = 404, detail = notif)
+    if notif == "Candidate is not approved for voting.":
+        raise HTTPException(status_code = 403, detail = notif)
+    if notif == "You have already voted for this position.":
+        raise HTTPException(status_code = 403, detail = notif) 
+    if notif == "Vote cast successfully.":
+        return {"message": notif}
+    else:
+        raise HTTPException(status_code = 500, detail = "Unexpected result")
+
+@app.get("/results")
+def fetch_results():
+    phase = get_current_phase()
+    if phase is None:
+        raise HTTPException(status_code=404, detail="Election not found.")
+    if phase != "closed":
+        raise HTTPException(status_code=403, detail="Results are available only after the election is closed.")
+    return get_results()
+
 #Aiman:
 #E0: Creates a new election if it doesn't exist (additional)
 @app.post("/election", status_code=201)
@@ -123,3 +157,4 @@ def withdraw(candidate_id: int, roll_no: str):
         raise HTTPException(status_code=400,detail="Only a nominated candidate can be withdrawn.")
 
     return functions.withdraw_candidate(candidate_id)
+
