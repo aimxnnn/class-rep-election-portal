@@ -27,7 +27,7 @@ class Votes(Base): #Afifa
     position = Column(String)
     candidate_id = Column(Integer, ForeignKey("Candidates.id"))
     voter_roll = Column(String)
-    voted_on = Column(DateTime, default=datetime)
+    voted_on = Column(DateTime, default=datetime.now)
 
 class Election(Base):
     __tablename__ = "Elections"
