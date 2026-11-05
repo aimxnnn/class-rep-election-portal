@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session
 from tables import engine, Candidates, Votes, Election, Positions, Next_phase
 
+# Shaff
 def get_current_phase():
     session = Session(engine)
     election = session.query(Election).first()
@@ -11,6 +12,7 @@ def get_current_phase():
     else:
         return None
 
+# Shaff
 def cast_vote(voter_roll, candidate_id):
     if get_current_phase() != "voting":
         return "Voting is not currently open."
@@ -34,6 +36,7 @@ def cast_vote(voter_roll, candidate_id):
         session.close()
         return "Vote cast successfully."
 
+# Shaff
 def get_results():
     session = Session(engine)
     response = []

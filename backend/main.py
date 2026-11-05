@@ -39,7 +39,11 @@ def vote(voter_roll: str, candidate_id: int):
 
 @app.get("/results")
 def fetch_results():
-    if get_current_phase() != "closed":
+    phase = get_current_phase()
+    if phase is None:
+        raise HTTPException(status_code=404, detail="Election not found.")
+    if phase != "closed":
         raise HTTPException(status_code=403, detail="Results are available only after the election is closed.")
     return get_results()
+
 
