@@ -156,11 +156,6 @@ def login_user(roll_no, password):
         "role": user.role
     }
 
-
-# ==========================================
-# EXISTING ELECTION FUNCTIONS
-# ==========================================
-
 # Shaff
 def get_current_phase():
 
