@@ -10,6 +10,14 @@ Positions = ["class_rep", "sports_secretary", "cultural_secretary", "tech_secret
 Statuses = ["nominated", "approved", "withdrawn"]
 Phases = ["nominations", "voting", "closed"]
 Next_phase = {"nominations": "voting", "voting": "closed"}
+Roles = ["officer", "student"]
+
+class Users(Base):
+    __tablename__ = "Users"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    role = Column(String, default="student", nullable=False)
 
 class Candidates(Base):
     __tablename__ = "Candidates"
