@@ -1,162 +1,407 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
-from functions import *
+from pydantic import BaseModel, Field
 import functions
+from tables import Positions, Next_phase
 
-app = FastAPI(
-    title = "Election Portal API"
-)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = ["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_methods = ["*"],
-    allow_headers = ["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
-#Aiman:
-#E0: Creates a new election if it doesn't exist (additional)
-@app.post("/election", status_code=201)
-def create_new_election():
-    if election_exists():
-        raise HTTPException(400, "The election already exists.")
-    return create_election()
+class RegisterRequest(BaseModel):
+    roll_no: str
+    password: str = Field(min_length=8)
 
-# Afifa:
-# E1 - Get all candidates
-@app.get("/candidates")
-def candidates(position=None, approved: bool = True):
-    return functions.get_all_candidates(position=position,approved=approved)
 
-# Afifa:
-# E2 - Get one candidate by ID
-@app.get("/candidates/{candidate_id}")
-def candidate(candidate_id: int):
+class LoginRequest(BaseModel):
+    roll_no: str
+    password: str
 
-    result = functions.get_candidate_by_id(candidate_id)
+
+class NominationRequest(BaseModel):
+    name: str = Field(min_length=1)
+    position: str
+    manifesto: str = Field(min_length=30, max_length=500)
+
+
+class VoteRequest(BaseModel):
+    candidate_id: int = Field(gt=0)
+
+
+# AUTHENTICATION HELPERS
+
+# Get logged-in user's details using JWT
+def get_logged_in_user(authorization):
+
+    if authorization is None:
+        raise HTTPException(status_code=401, detail="Please login first.")
+
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authorization header."
+        )
+
+    token = authorization.replace("Bearer ", "", 1)
+
+    user = functions.verify_token(token)
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token."
+        )
+
+    return user
+
+
+# Check whether the user is an admin
+def check_admin(user):
+
+    if user["role"] != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required."
+        )
+
+
+# Check whether the user is a student
+def check_student(user):
+
+    if user["role"] != "student":
+        raise HTTPException(
+            status_code=403,
+            detail="Student access required."
+        )
+
+
+# REGISTER AND LOGIN 
+
+@app.post("/register", status_code=201)
+def register(data: RegisterRequest):
+
+    # Check roll number
+    if not data.roll_no.startswith("R") or not data.roll_no[1:].isdigit():
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid roll number."
+        )
+
+    # Register the student
+    result = functions.register_user(
+        data.roll_no,
+        data.password
+    )
 
     if result is None:
-        raise HTTPException(status_code=404,detail="Candidate not found.")
+        raise HTTPException(
+            status_code=400,
+            detail="User already exists."
+        )
+
+    return {"message": result}
+
+# LOGIN
+
+@app.post("/login")
+def login(data: LoginRequest):
+
+    result = functions.login_user(
+        data.roll_no,
+        data.password
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid roll number or password."
+        )
+
     return result
 
-#Aiman:
-#E3: Nomiinates candidates
-@app.post("/candidates", status_code=201)
-def nominate(roll_no: str, name: str, position: str, manifesto: str):
-    if roll_no.strip() == "" or name.strip() == "" or manifesto.strip() == "":
-        raise HTTPException(422, "All fields are required.")
-    if position not in Positions:
-        raise HTTPException(422, "Invalid position.")
-    if len(manifesto) < 30:
-        raise HTTPException(422, "Manifesto must be at least 30 characters.")
-    if get_phase() == "not created":
-      raise HTTPException(400, "The election has not been created yet.")
-    if get_phase() != "nominations":
-        raise HTTPException(400, "Nominations are closed.")
-    if find_active_candidate(roll_no):
-        raise HTTPException(400, "This roll number is already a candidate.")
 
-    return nominate_candidate(roll_no, name, position, manifesto)
+# E0: CREATE ELECTION 
 
-# Afifa
-# E4 - Approve a nomination
-@app.patch("/candidates/{candidate_id}/approve")
-def approve(candidate_id: int):
+@app.post("/election")
+def add_election(authorization: str = Header(None)):
+
+    user = get_logged_in_user(authorization)
+    check_admin(user)
+
+    if functions.election_exists():
+        raise HTTPException(
+            status_code=400,
+            detail="Election already exists."
+        )
+
+    return functions.create_election()
+
+
+# E1: GET ALL CANDIDATES 
+
+@app.get("/candidates")
+def get_candidates(position: str = None):
+
+    if position is not None and position not in Positions:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid position."
+        )
+
+    return functions.get_all_candidates(
+        position=position,
+        approved=True
+    )
+
+
+# E2: GET CANDIDATE BY ID 
+
+@app.get("/candidates/{candidate_id}")
+def get_candidate(candidate_id: int):
 
     candidate = functions.get_candidate_by_id(candidate_id)
 
     if candidate is None:
-        raise HTTPException(status_code=404,detail="Candidate not found.")
+        raise HTTPException(
+            status_code=404,
+            detail="Candidate not found."
+        )
+
+    return candidate
+
+
+# E3: NOMINATE CANDIDATE 
+
+@app.post("/candidates")
+def add_candidate(
+    data: NominationRequest,
+    authorization: str = Header(None)
+):
+
+    user = get_logged_in_user(authorization)
+    check_student(user)
+
+    roll_no = user["roll_no"]
+
+    if data.position not in Positions:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid position."
+        )
+
+    if not functions.election_exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Election does not exist."
+        )
 
     if functions.get_phase() != "nominations":
-        raise HTTPException(status_code=400,detail="Approving is only allowed during nominations.")
+        raise HTTPException(
+            status_code=400,
+            detail="Nominations are closed."
+        )
+
+    existing_candidate = functions.find_active_candidate(roll_no)
+
+    if existing_candidate:
+        raise HTTPException(
+            status_code=400,
+            detail="You already have an active nomination."
+        )
+
+    return functions.nominate_candidate(
+        roll_no,
+        data.name,
+        data.position,
+        data.manifesto
+    )
+
+
+# E4: APPROVE CANDIDATE 
+
+@app.patch("/candidates/{candidate_id}/approve")
+def approve(
+    candidate_id: int,
+    authorization: str = Header(None)
+):
+
+    user = get_logged_in_user(authorization)
+    check_admin(user)
+
+    if functions.get_phase() != "nominations":
+        raise HTTPException(
+            status_code=400,
+            detail="Nominations are closed."
+        )
+
+    candidate = functions.get_candidate_by_id(candidate_id)
+
+    if candidate is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Candidate not found."
+        )
 
     if candidate["status"] != "nominated":
-        raise HTTPException(status_code=400,detail="Only a nominated candidate can be approved.")
+        raise HTTPException(
+            status_code=400,
+            detail="Candidate cannot be approved."
+        )
 
     return functions.approve_candidate(candidate_id)
 
-# Afifa
-# E5 - Withdraw a nomination
+
+# E5: WITHDRAW CANDIDATE
+
 @app.patch("/candidates/{candidate_id}/withdraw")
-def withdraw(candidate_id: int, roll_no: str):
+def withdraw(
+    candidate_id: int,
+    authorization: str = Header(None)
+):
+
+    user = get_logged_in_user(authorization)
+    check_student(user)
+
+    if functions.get_phase() != "nominations":
+        raise HTTPException(
+            status_code=400,
+            detail="Nominations are closed."
+        )
 
     candidate = functions.get_candidate_by_id(candidate_id)
 
     if candidate is None:
-        raise HTTPException(status_code=404,detail="Candidate not found.")
+        raise HTTPException(
+            status_code=404,
+            detail="Candidate not found."
+        )
 
-    if functions.get_phase() != "nominations":
-        raise HTTPException(status_code=400,detail="Withdrawing is only allowed during nominations.")
-
-    if candidate["roll_no"] != roll_no:
-        raise HTTPException(status_code=403,detail="Roll number does not match this candidate.")
+    if candidate["roll_no"] != user["roll_no"]:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only withdraw your own nomination."
+        )
 
     if candidate["status"] != "nominated":
-        raise HTTPException(status_code=400,detail="Only a nominated candidate can be withdrawn.")
+        raise HTTPException(
+            status_code=400,
+            detail="Candidate cannot be withdrawn."
+        )
 
     return functions.withdraw_candidate(candidate_id)
 
 
-# Shaff:
-#E6: Getting the current phase of the election
+#  E6: GET CURRENT PHASE 
+
 @app.get("/current_phase")
 def current_phase():
-    phase = get_current_phase()
-    if phase is None:
-        raise HTTPException(status_code = 404, detail = "Election not found.")
-    return {"current_phase": phase}
 
-#Aiman:
-#E7: Updates the election phase to the next phase 
+    phase = functions.get_phase()
+
+    if phase is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Election does not exist."
+        )
+
+    return {"phase": phase}
+
+
+# E7: CHANGE ELECTION PHASE 
+
 @app.patch("/election/next-phase")
-def next_phase():
-    election_phase = get_phase()
-    if election_phase not in Next_phase:
-        raise HTTPException(400, "The election is already closed.")
+def next_phase(authorization: str = Header(None)):
 
-    if election_phase == "nominations":
+    user = get_logged_in_user(authorization)
+    check_admin(user)
+
+    current = functions.get_phase()
+
+    if current is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Election does not exist."
+        )
+
+    if current not in Next_phase:
+        raise HTTPException(
+            status_code=400,
+            detail="Election is already closed."
+        )
+
+    new_phase = Next_phase[current]
+
+    if current == "nominations":
+
         for position in Positions:
-            if count_approved(position) == 0:
-                raise HTTPException(400, f"No approved candidate for {position}.")
 
-    return change_phase(Next_phase[election_phase])
+            approved_count = functions.count_approved(position)
 
-# Shaff:
-#E8: Casting a vote
+            if approved_count == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No approved candidates for {position}."
+                )
+
+    return functions.change_phase(new_phase)
+
+
+# 8: CAST VOTE 
+
 @app.post("/votes")
-def vote(voter_roll: str, candidate_id: int):
-    notif = cast_vote(voter_roll, candidate_id)
-    if notif == "Voting is not currently open.":
-        raise HTTPException(status_code = 403, detail = notif)
-    if notif == "Candidate not found.":
-        raise HTTPException(status_code = 404, detail = notif)
-    if notif == "Candidate is not approved for voting.":
-        raise HTTPException(status_code = 403, detail = notif)
-    if notif == "You have already voted for this position.":
-        raise HTTPException(status_code = 403, detail = notif) 
-    if notif == "Vote cast successfully.":
-        return {"message": notif}
-    else:
-        raise HTTPException(status_code = 500, detail = "Unexpected result")
+def vote(
+    data: VoteRequest,
+    authorization: str = Header(None)
+):
 
-#Aiman:
-#E9: Gives the positions that the voter has voted for
-@app.get("/votes/{voter_roll}/positions")
-def voted_positions(voter_roll):
-    return {"voter_roll": voter_roll, "voted_positions": get_voted_positions(voter_roll)}
+    user = get_logged_in_user(authorization)
+    check_student(user)
 
-# Shaff:
-#E10: Get the results
+    result = functions.cast_vote(
+        user["roll_no"],
+        data.candidate_id
+    )
+
+    if result == "Election does not exist.":
+        raise HTTPException(status_code=404, detail=result)
+
+    if result != "Vote cast successfully.":
+        raise HTTPException(status_code=400, detail=result)
+
+    return {"message": result}
+
+
+# 9: GET MY VOTED POSITIONS 
+
+@app.get("/votes/my-positions")
+def my_voted_positions(authorization: str = Header(None)):
+
+    user = get_logged_in_user(authorization)
+    check_student(user)
+
+    return functions.get_voted_positions(user["roll_no"])
+
+
+# 10: GET ELECTION RESULTS
+
 @app.get("/results")
-def fetch_results():
-    phase = get_current_phase()
-    if phase is None:
-        raise HTTPException(status_code=404, detail="Election not found.")
+def results():
+
+    phase = functions.get_phase()
+
     if phase != "closed":
-        raise HTTPException(status_code=403, detail="Results are available only after the election is closed.")
-    return get_results()
+        raise HTTPException(
+            status_code=403,
+            detail="Results are available only after the election is closed."
+        )
 
-
-
-
+    return functions.get_results()
