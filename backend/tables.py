@@ -36,8 +36,6 @@ class Election(Base):
     start_time = Column(DateTime, default=datetime.now)
     end_time = Column(DateTime)
 
-Base.metadata.create_all(engine)
-
 class Users(Base):
     __tablename__ = "Users"
 
@@ -46,5 +44,8 @@ class Users(Base):
     name = Column(String, nullable=False)
     password = Column(String, nullable=False)
     role = Column(String, default="student", nullable=False)
+
+Base.metadata.create_all(engine)
+
 
 
