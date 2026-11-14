@@ -38,4 +38,13 @@ class Election(Base):
 
 Base.metadata.create_all(engine)
 
+class Users(Base):
+    __tablename__ = "Users"
+
+    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    roll_no = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
+    password = Column(String, nullable=False)
+    role = Column(String, default="student", nullable=False)
+
 
