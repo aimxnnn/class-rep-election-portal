@@ -1,162 +1,9 @@
 from sqlalchemy.orm import Session
-from tables import engine, Candidates, Votes, Election, Users, Positions, Next_phase
-from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError, VerificationError
-import jwt
-from datetime import datetime, timedelta, timezone
+from tables import (engine, Candidates, Votes, Election, Positions, Next_phase)
 
-
-# JWT SECRET KEY
-SECRET_KEY = "Omggggg"
-ALGORITHM = "HS256"
-
-# Password hashing object
-password_hasher = PasswordHasher()
-
-# 1. PASSWORD HASHING
-
-def hash_password(password):
-    return password_hasher.hash(password)
-
-
-def verify_password(password, hashed_password):
-    try:
-        return password_hasher.verify(hashed_password, password)
-    except (VerifyMismatchError, VerificationError):
-        return False
-
-# 2. JWT TOKEN
-
-def create_token(roll_no, role):
-
-    payload = {
-        "sub": roll_no,
-        "role": role,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=2)
-    }
-
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-    return token
-
-
-def verify_token(token):
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-
-        roll_no = payload.get("sub")
-
-        session = Session(engine)
-
-        user = session.query(Users).filter(
-            Users.roll_no == roll_no
-        ).first()
-
-        if user is None:
-            session.close()
-            return None
-
-        response = {
-            "roll_no": user.roll_no,
-            "role": user.role
-        }
-
-        session.close()
-
-        return response
-
-    except jwt.InvalidTokenError:
-        return None
-
-# 3. USER REGISTRATION
-
-def register_user(roll_no, password):
-
-    session = Session(engine)
-
-    existing_user = session.query(Users).filter(
-        Users.roll_no == roll_no
-    ).first()
-
-    if existing_user:
-        session.close()
-        return None
-
-    hashed_password = hash_password(password)
-
-    user = Users(
-        roll_no=roll_no,
-        password=hashed_password,
-        role="student"
-    )
-
-    session.add(user)
-    session.commit()
-
-    session.close()
-
-    return {"message": "Student registered successfully."}
-
-# 4. MANUALLY CREATE ADMIN
-
-def create_admin(roll_no, password):
-
-    session = Session(engine)
-
-    existing_user = session.query(Users).filter(
-        Users.roll_no == roll_no
-    ).first()
-
-    if existing_user:
-        session.close()
-        return "User already exists."
-
-    hashed_password = hash_password(password)
-
-    admin = Users(
-        roll_no=roll_no,
-        password=hashed_password,
-        role="admin"
-    )
-
-    session.add(admin)
-    session.commit()
-
-    session.close()
-
-    return "Admin created successfully."
-
-# 5. LOGIN
-
-def login_user(roll_no, password):
-
-    session = Session(engine)
-
-    user = session.query(Users).filter(
-        Users.roll_no == roll_no
-    ).first()
-
-    if user is None:
-        session.close()
-        return None
-
-    if not verify_password(password, user.password):
-        session.close()
-        return None
-
-    token = create_token(user.roll_no, user.role)
-
-    session.close()
-
-    return {
-        "message": "Login successful.",
-        "access_token": token,
-        "token_type": "bearer",
-        "role": user.role
-    }
 
 # Shaff
+
 def get_current_phase():
 
     session = Session(engine)
@@ -172,6 +19,7 @@ def get_current_phase():
 
 
 # Shaff
+
 def cast_vote(voter_roll, candidate_id):
 
     if get_current_phase() != "voting":
@@ -216,6 +64,7 @@ def cast_vote(voter_roll, candidate_id):
 
 
 # Shaff
+
 def get_results():
 
     session = Session(engine)
@@ -254,6 +103,7 @@ def get_results():
         for candidate in position_results:
 
             if candidate["vote_count"] > highest_votes:
+
                 highest_votes = candidate["vote_count"]
                 winner = candidate
 
@@ -271,6 +121,7 @@ def get_results():
 
 
 # Aiman
+
 def election_exists():
 
     session = Session(engine)
@@ -289,7 +140,9 @@ def create_election():
     election = Election(phase="nominations")
 
     session.add(election)
+
     session.commit()
+
     session.close()
 
     return {
@@ -341,6 +194,7 @@ def nominate_candidate(roll_no, name, position, manifesto):
     )
 
     session.add(candidate)
+
     session.commit()
 
     candidate_id = candidate.id
@@ -373,16 +227,10 @@ def change_phase(new_phase):
 
     election = session.query(Election).first()
 
-    if election is None:
-        session.close()
-        return None
-
     election.phase = new_phase
 
-    if new_phase == "closed":
-        election.end_time = datetime.now()
-
     session.commit()
+
     session.close()
 
     return {
@@ -409,11 +257,10 @@ def get_voted_positions(voter_roll):
     return positions
 
 
-# ==========================================
-# AFIFA - E1, E2, E4, E5
-# ==========================================
+# Afifa
 
-# E1 - Get all candidates
+# E1 - Get all candidates, optionally filtered by position.
+
 def get_all_candidates(position=None, approved=True):
 
     session = Session(engine)
@@ -421,17 +268,20 @@ def get_all_candidates(position=None, approved=True):
     if position in Positions:
 
         if approved:
+
             candidates = session.query(Candidates).filter(
                 Candidates.position == position,
                 Candidates.status == "approved"
             ).all()
 
         else:
+
             candidates = session.query(Candidates).filter(
                 Candidates.position == position
             ).all()
 
     else:
+
         candidates = session.query(Candidates).all()
 
     response = []
@@ -455,7 +305,8 @@ def get_all_candidates(position=None, approved=True):
     return response
 
 
-# E2 - Get one candidate
+# E2 - Get one candidate by ID.
+
 def get_candidate_by_id(candidate_id):
 
     session = Session(engine)
@@ -481,7 +332,8 @@ def get_candidate_by_id(candidate_id):
     return response
 
 
-# E4 - Approve candidate
+# E4 - Approve a nomination.
+
 def approve_candidate(candidate_id):
 
     session = Session(engine)
@@ -511,7 +363,8 @@ def approve_candidate(candidate_id):
     return response
 
 
-# E5 - Withdraw candidate
+# E5 - Withdraw a nomination.
+
 def withdraw_candidate(candidate_id):
 
     session = Session(engine)

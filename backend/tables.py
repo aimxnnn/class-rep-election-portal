@@ -1,29 +1,41 @@
 
 from sqlalchemy import String, Integer, Column, create_engine, DateTime, ForeignKey
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, Session
 from datetime import datetime
 
 db_path = "election.db"
+
 engine = create_engine(f"sqlite:///{db_path}")
+
 Base = declarative_base()
 
-Positions = ["class_rep", "sports_secretary", "cultural_secretary", "tech_secretary"]
-Statuses = ["nominated", "approved", "withdrawn"]
-Phases = ["nominations", "voting", "closed"]
-Next_phase = {"nominations": "voting", "voting": "closed"}
+Positions = [
+    "class_rep",
+    "sports_secretary",
+    "cultural_secretary",
+    "tech_secretary"
+]
 
+Statuses = [
+    "nominated",
+    "approved",
+    "withdrawn"
+]
 
-# NEW: Users table
-class Users(Base):
-    __tablename__ = "Users"
+Phases = [
+    "nominations",
+    "voting",
+    "closed"
+]
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    roll_no = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False)
-    role = Column(String, default="student", nullable=False)
+Next_phase = {
+    "nominations": "voting",
+    "voting": "closed"
+}
 
 
 class Candidates(Base):
+
     __tablename__ = "Candidates"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -35,7 +47,8 @@ class Candidates(Base):
     nominated_on = Column(DateTime, default=datetime.now)
 
 
-class Votes(Base):
+class Votes(Base):  # Afifa
+
     __tablename__ = "Votes"
 
     id = Column(Integer, primary_key=True)
@@ -46,6 +59,7 @@ class Votes(Base):
 
 
 class Election(Base):
+
     __tablename__ = "Elections"
 
     id = Column(Integer, primary_key=True)
@@ -55,3 +69,4 @@ class Election(Base):
 
 
 Base.metadata.create_all(engine)
+
